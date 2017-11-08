@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">CustoCamera</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_camera2_page1">Camera2Page1</string>
+    <string name="title_activity_camera1_page1">Camera1Page1</string>
+    <string name="title_activity_camera2_page2">Camera2Page2</string>
+    <string name="title_activity_camera1_page2">Camera1Page2</string>
+    <string name="title_activity_camera1_page3">Camera1Page3</string>
+    <string name="title_activity_camera2_page3">Camera2Page3</string>
+
+</resources>
