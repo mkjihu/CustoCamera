@@ -9,6 +9,7 @@ import java.util.List;
 import com.androidquery.AQuery;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -19,11 +20,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
 
 public class Camera1Page2 extends AppCompatActivity implements SurfaceHolder.Callback, OnClickListener{
@@ -66,7 +69,7 @@ public class Camera1Page2 extends AppCompatActivity implements SurfaceHolder.Cal
 	   private void openCamera() {
 	        if (mCamera == null) {
 	            try {
-	                mCamera = Camera.open();
+	                mCamera = Camera.open(1);
 	            } catch (RuntimeException e) {
 	                finish();
 	                return;
@@ -102,7 +105,7 @@ public class Camera1Page2 extends AppCompatActivity implements SurfaceHolder.Cal
 	        
 	        
 	        setSurfaceViewSize(mBestPreviewSize);
-
+	        setCameraDisplayOrientation(this, mCamera);
 	        try {
 	            mCamera.setParameters(cameraParams);
 	        } catch (RuntimeException e) {
@@ -271,6 +274,7 @@ public class Camera1Page2 extends AppCompatActivity implements SurfaceHolder.Cal
 	            public void onPictureTaken(byte[] data, Camera camera) {
 	                
 	            	Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+	            	Log.i("圖片高寬", bitmap.getHeight()+","+bitmap.getWidth());
 	                if (bitmap !=null) {
 						Log.i("淦淦", "有");
 						aq.id(R.id.imageView1).image(bitmap);
@@ -394,5 +398,40 @@ public class Camera1Page2 extends AppCompatActivity implements SurfaceHolder.Cal
 	    static int getMaxOutputWidth(Intent data) {
 	        return data.getIntExtra(EXTRA_OUTPUT_MAX_WIDTH, 0);
 	    }
+	}
+	
+	
+	//======2016 10 12 Nexus 5 反轉=========
+	
+	
+	public void setCameraDisplayOrientation(Context context, Camera mCamera) {
+	    Camera.CameraInfo info =
+	            new Camera.CameraInfo();
+	    Camera.getCameraInfo(0, info); // 使用第一个后置摄像头
+	    int rotation = getDeviceCurrentOrientation(context);
+
+	    int degrees = 0;
+	    switch (rotation) {
+	        case Surface.ROTATION_0: degrees = 0; break;
+	        case Surface.ROTATION_90: degrees = 90; break;
+	        case Surface.ROTATION_180: degrees = 180; break;
+	        case Surface.ROTATION_270: degrees = 270; break;
+	    }
+
+	    int result;
+	    if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+	        result = (info.orientation + degrees) % 360;
+	        result = (360 - result) % 360;  // compensate the mirror
+	    } else {  // back-facing
+	        result = (info.orientation - degrees + 360) % 360;
+	    }
+	    mCamera.setDisplayOrientation(result);
+	}
+	
+	public static int getDeviceCurrentOrientation(Context context) {
+	    WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+	    int rotation = windowManager.getDefaultDisplay().getRotation();
+	    Log.d("Utils", "Current orientation = " + rotation);
+	    return rotation;
 	}
 }

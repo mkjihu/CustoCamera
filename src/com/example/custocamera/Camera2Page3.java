@@ -3,6 +3,8 @@ import android.Manifest;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.graphics.*;
+import android.graphics.drawable.Drawable;
+import android.hardware.Camera;
 import android.hardware.camera2.*;
 import android.hardware.camera2.params.*;
 import android.media.*;
@@ -13,6 +15,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.*;
 import android.util.Size;
 import android.view.*;
+import android.view.View.MeasureSpec;
 import android.view.View.OnClickListener;
 import android.widget.*;
 import com.androidquery.AQuery;
@@ -31,8 +34,8 @@ public class Camera2Page3 extends AppCompatActivity {
 	
     private TextureView textureView;
     //private SurfaceHolder surfaceHolder;
-    private int currentCameraId = CameraCharacteristics.LENS_FACING_FRONT;//摄像头id（通常0代表后置摄像头，1代表前置摄像头）
-    
+    //private int currentCameraId = CameraCharacteristics.LENS_FACING_FRONT;//摄像头id（通常0代表后置摄像头，1代表前置摄像头）
+    private int currentCameraId = 1;//摄像头id（通常0代表后置摄像头，1代表前置摄像头）
     private int height=0,width=0;
     
 	private CameraManager cameraManager;
@@ -53,7 +56,7 @@ public class Camera2Page3 extends AppCompatActivity {
 	public FrameLayout lair;
 	public ImageView opimag;
 	public AQuery aq;
-	
+	public FrameLayout LinearLayout1;
 	public CameraTopRectView2 rectOnCamera;
 	
 	
@@ -70,7 +73,13 @@ public class Camera2Page3 extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+      //加入這一行
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        //選擇性加入這一行
+        getWindow().setFlags( WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams. FLAG_FULLSCREEN);
         setContentView(R.layout.activity_camera2_page3);
+        
+        
         aq = new AQuery(this);
         initView();
     }
@@ -83,7 +92,7 @@ public class Camera2Page3 extends AppCompatActivity {
 		opimag = (ImageView)findViewById(R.id.opimag);
 		lair = (FrameLayout)findViewById(R.id.lair);
 		rectOnCamera = (CameraTopRectView2)findViewById(R.id.rectOnCamera);
-		
+		LinearLayout1 = (FrameLayout)findViewById(R.id.LinearLayout1);
 	    //Camera2全程异步
 	    handlerThread = new HandlerThread("Camera2");
 	    handlerThread.start();
@@ -105,11 +114,21 @@ public class Camera2Page3 extends AppCompatActivity {
 			public void onClick(View v) {
 				
 				takePhoto();
+				
 			}
 		});
 	   
 
 	}
+	public static Bitmap convertViewToBitmap(View view){
+		//view.setDrawingCacheEnabled(true); 
+		view.destroyDrawingCache();
+		view.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));  
+	    view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());  
+	    view.buildDrawingCache();  
+	    Bitmap bitmap = view.getDrawingCache();  
+	    return bitmap; 
+	}  
 	 /**TextureView的监听*/
     private TextureView.SurfaceTextureListener surfaceTextureListener= new TextureView.SurfaceTextureListener() {
 
@@ -118,7 +137,7 @@ public class Camera2Page3 extends AppCompatActivity {
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
         	Camera2Page3.this.width=width;
         	Camera2Page3.this.height=height;
-        	Log.i("淦", ""+height);
+        	Log.i("淦", width+","+height);
             openCamera();
         }
         @Override
@@ -134,7 +153,7 @@ public class Camera2Page3 extends AppCompatActivity {
         public void onSurfaceTextureUpdated(SurfaceTexture surface) {}
     };
     
-    
+    Size largest2 ;
     /**
      * 打开相机
      */
@@ -154,10 +173,27 @@ public class Camera2Page3 extends AppCompatActivity {
                  // 获取手机目前的旋转方向(横屏还是竖屏
                  mSensorOrientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
                  
-                 // 获取摄像头支持的最大尺寸 获取最佳的预览尺寸
+                 // 获取摄像头支持的最大尺寸 获取最佳的预览尺寸 //选择sizeMap中大于并且最接近width和height的size
                  Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
-                 imageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),ImageFormat.JPEG, 2);
-                 previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, largest);
+                 Log.i("取得照片的可能實際大小", largest.getHeight()+","+largest.getWidth());
+                
+
+                 previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), Camera2Page3.this.width, Camera2Page3.this.height, largest);
+                 Log.i("可能拿来显示的大小", previewSize.getHeight()+","+previewSize.getWidth());
+                 /*
+                 	前两个width,height是用来指定生成图像的宽和高。
+					第三个参数format是图像的格式，这个格式必须是 ImageFormat
+					或PixelFormat中的一个，这两个Format里有很多格式，大家可以点进去看看，我们例子中使用的是PixelFormat.RGBA_8888格式(需要注意的是并不是所有的格式都被ImageReader支持，比如说ImageFormat.NV21)。
+					第四个参数是maxImages，这个参数指的是你想同时在ImageReader里获取到的Image对象的个数，这个参数我不是很懂，我不理解同时的意思。我的理解是ImageReader是一个类似数组的东西，然后我们可以通过acquireLatestImage()
+					或acquireNextImage()方法来得到里面的Image对象(可能有误，仅供参考)。这个值应该设置的越小越好，但是得大于0，所以我们上面设置的是1。
+ 					1.默认图像的宽度像素
+					2.默认图像的高度像素
+					3.图像的格式
+					4.用户想要读图像的最大数量
+                  */
+                 imageReader = ImageReader.newInstance(largest.getWidth(),largest.getHeight(),ImageFormat.JPEG, 1);
+                 
+                 
                  
                  //监听ImageReader时间，有图像数据可用时回调，参数就是帧数据         註冊偵聽器，以便在ImageReader中有新圖像可用時進行調用。
                  imageReader.setOnImageAvailableListener(imageAvailableListener,handler);//-诞生用来处理main线程的Handler对象
@@ -208,7 +244,16 @@ public class Camera2Page3 extends AppCompatActivity {
             
             SurfaceTexture texture = textureView.getSurfaceTexture();
             // 设置宽度和高度
-            texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
+            texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());//设置图片缓存的默认大小
+            Log.i("图片缓存的默认大小", previewSize.getWidth()+","+previewSize.getHeight());
+            
+           runOnUiThread(new Runnable() {
+			
+			@Override
+			public void run() {
+				setSurfaceViewSize(previewSize);
+			}
+		}); 
             // 用来开始预览的输出surface
             Surface surface = new Surface(texture);
             previewBuilder.addTarget(surface);//设置Surface作为预览数据的显示界面
@@ -222,7 +267,11 @@ public class Camera2Page3 extends AppCompatActivity {
         }
 
     }
-
+    private void setSurfaceViewSize(Size size) {
+        ViewGroup.LayoutParams params = textureView.getLayoutParams();
+        params.height = textureView.getWidth() * size.getWidth() / size.getHeight();
+        textureView.setLayoutParams(params);
+    }
     //创建  预览  session回调
     private CameraCaptureSession.StateCallback sessionStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
@@ -259,7 +308,7 @@ public class Camera2Page3 extends AppCompatActivity {
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 //Size maxSize = getMaxSize(map.getOutputSizes(SurfaceHolder.class));
                 Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
-                Size maxSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, largest);
+                Size maxSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), Camera2Page3.this.width, Camera2Page3.this.height, largest);
                 if (currentCameraId == CameraCharacteristics.LENS_FACING_BACK && characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
                     //前置转后置
                     previewSize = maxSize;
@@ -379,21 +428,62 @@ public class Camera2Page3 extends AppCompatActivity {
             byte[] data = new byte[buffer.remaining()];
             buffer.get(data);
             BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = 1;//1是載入原圖   根据inSampleSize载入一个缩略图。 比如inSampleSize=4，载入的缩略图是原图大小的1/4。
+            options.inSampleSize = 2;//1是載入原圖   根据inSampleSize载入一个缩略图。 比如inSampleSize=4，载入的缩略图是原图大小的1/4。
             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, options);
-        	Log.i("高", bitmap.getHeight()+"");
-        	Log.i("寬", bitmap.getWidth()+"");
         	
-        	//rectOnCamera.draw(new Canvas());
-        	Bitmap bm = Bitmap.createBitmap(bitmap, rectOnCamera.getRectLeft(),
-        			rectOnCamera.getRectTop(),
-        			rectOnCamera.getRectRight() - rectOnCamera.getRectLeft(),
-        			rectOnCamera.getRectBottom() - rectOnCamera.getRectTop());// 截取
-        	Log.i("高1", bm.getHeight()+"");
-        	Log.i("寬2", bm.getWidth()+"");
+            Log.i("原圖高", bitmap.getHeight()+"");
+        	Log.i("原圖寬", bitmap.getWidth()+"");
         	
-        	//handler.post(new ImageSaver(bitmap));
-        	runOnUiThread(new ImageSaver(bm));
+        	
+        	/**因為顯示UI是  选择sizeMap中大于并且最接近width和height的size  所以比例絕對跟實際照片大小不一樣*/
+        	int uHeight = bitmap.getHeight();//原圖高
+        	int uWidth = bitmap.getWidth();//原圖寬
+        	
+        	if(uHeight>uWidth){
+        		//如果圖是長條ㄉ
+        		//-UI的寬
+            	int uiw = rectOnCamera.getWidth();
+            	Log.i("uiwx",uiw+"");
+            	//從寬處理
+            	float ubz = (float) uiw / uWidth;//圖跟UI的寬比值
+            	Log.i("左上x",ubz+"");
+            	float ub_OOO = (float) rectOnCamera.getFuckSide() /(float) (ubz);//邊長比
+            	
+            	int gg = (int)ub_OOO /2;//邊長的1/2
+            	
+            	int xx = Math.abs((uWidth/2) - gg);//左上x
+            	Log.i("左上x",xx+"");
+            	int yy = Math.abs((uHeight/2) - gg);//左上y
+            	Log.i("左上y",yy+"");
+            	
+            	/**/
+            	//参数说明：
+            	//Bitmap source：要从中截图的原始位图
+            	//int x:起始x坐标
+            	//int y：起始y坐标
+    			//int width：要截的图的宽度
+    			//int height：要截的图的高度
+            	//http://blog.csdn.net/fq813789816/article/details/54017074
+            	Bitmap bm = Bitmap.createBitmap(bitmap
+            			, xx
+            			, yy
+                        , gg*2
+                        , gg*2);//邊長取正數+四捨五入
+            	
+            	Log.i("高1", bm.getHeight()+"");
+            	Log.i("寬2", bm.getWidth()+"");
+            	runOnUiThread(new ImageSaver(bm));//handler.post(new ImageSaver(bitmap));
+        	}
+        	else{
+        		Log.i("GG","GG");
+        	}
+        	
+        	
+        	
+        	
+        	
+        	
+        	
         	
         	image.close();
         }
@@ -412,7 +502,27 @@ public class Camera2Page3 extends AppCompatActivity {
     }
     //=================================================================================================================================================================
     
-    
+	// 将view转为bitmap
+	public static Bitmap getBitmapFromView(View view)
+	{
+	    // Define a bitmap with the same size as the view
+	    Bitmap returnedBitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+	    // Bind a canvas to it
+	    Canvas canvas = new Canvas(returnedBitmap);
+	    // Get the view's background
+	    Drawable bgDrawable = view.getBackground();
+	    if (bgDrawable != null)
+	        // has background drawable, then draw it on the canvas
+	        bgDrawable.draw(canvas);
+	    else
+	        // does not have background drawable, then draw white background on
+	        // the canvas
+	        canvas.drawColor(Color.WHITE);
+	    // draw the view on the canvas
+	    view.draw(canvas);
+	    // return the bitmap
+	    return returnedBitmap;
+	}
     
     
     
@@ -453,26 +563,15 @@ public class Camera2Page3 extends AppCompatActivity {
     
     
     //=================================================================================================================================================================
-    /**获取最大预览尺寸*/
-    private Size getMaxSize(Size[] outputSizes) {
-        Size sizeMax = null;
-        if (outputSizes != null) {
-            sizeMax = outputSizes[0];
-            for (Size size : outputSizes) {
-                if (size.getWidth() * size.getHeight() > sizeMax.getWidth() * sizeMax.getHeight()) {
-                    sizeMax = size;
-                }
-            }
-        }
-        return sizeMax;
-    }
-    
+
+    //选择sizeMap中大于并且最接近width和height的size
     private Size chooseOptimalSize(Size[] choices, int width, int height, Size aspectRatio)
     {
         // 收集摄像头支持的大过预览Surface的分辨率
         List<Size> bigEnough = new ArrayList<>();
         int w = aspectRatio.getWidth();
         int h = aspectRatio.getHeight();
+      
         for (Size option : choices)
         {
             if (option.getHeight() == option.getWidth() * h / w &&
@@ -481,6 +580,7 @@ public class Camera2Page3 extends AppCompatActivity {
                 bigEnough.add(option);
             }
         }
+        
         // 如果找到多个预览尺寸，获取其中面积最小的
         if (bigEnough.size() > 0)
         {
@@ -493,7 +593,30 @@ public class Camera2Page3 extends AppCompatActivity {
         }
     } 
     
-    
+    private Size getPreferredPreviewSize(Size[] sizes, int width, int height) {
+        List<Size> collectorSizes = new ArrayList<>();
+        for (Size option : sizes) {
+            if (width > height) {
+                if (option.getWidth() > width && option.getHeight() > height) {
+                    collectorSizes.add(option);
+                }
+            } else {
+                if (option.getHeight() > width && option.getWidth() > height) {
+                    collectorSizes.add(option);
+                }
+            }
+        }
+        if (collectorSizes.size() > 0) {
+            return Collections.min(collectorSizes, new Comparator<Size>() {
+                @Override
+                public int compare(Size s1, Size s2) {
+                    return Long.signum(s1.getWidth() * s1.getHeight() - s2.getWidth() * s2.getHeight());
+                }
+            });
+        }
+        return sizes[0];
+    }
+
     public class CompareSizesByArea implements Comparator<Size>
     {
         @Override
@@ -504,5 +627,5 @@ public class Camera2Page3 extends AppCompatActivity {
                     (long) rhs.getWidth() * rhs.getHeight());
         }
     }  
-     
+   
 }

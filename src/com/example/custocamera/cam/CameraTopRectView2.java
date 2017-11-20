@@ -59,6 +59,14 @@ public class CameraTopRectView2 extends View {
     private Rect rect;
     private int baseline;
 
+    //高寬比值
+    private float Highratio;
+    private float Widthratio;
+    
+    
+    private int fuckSide;
+    
+    
     public CameraTopRectView2(Context context, AttributeSet attrs) {
         super(context, attrs);
         // TODO Auto-generated constructor stub
@@ -74,13 +82,13 @@ public class CameraTopRectView2 extends View {
         display.getSize(size);
         int width = size.x;
         int height = size.y;
-        Log.i("新取法1", width+"~"+height);
+        //Log.i("新取法1", width+"~"+height);
         
         DisplayMetrics displayMetrics = new DisplayMetrics();
         activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         int deviceWidth = displayMetrics.widthPixels;
         int deviceHeight = displayMetrics.heightPixels;
-        Log.i("新取法2", deviceWidth+"~"+deviceHeight);
+        //Log.i("新取法2", deviceWidth+"~"+deviceHeight);
         
         
         
@@ -96,21 +104,49 @@ public class CameraTopRectView2 extends View {
                         LEFT_PADDING + RIGHT_PADDING);*/
 
         rectWidth = panelWidth - (int) DisplayUtil.dp2px(activity,LEFT_PADDING + RIGHT_PADDING);
-
+        
+        
+        //Log.i("误差0.5版",  DisplayUtil.dp2px(activity,LEFT_PADDING + RIGHT_PADDING)+"");
+        //Log.i("精准版",  DisplayUtil.dpToPx(activity,LEFT_PADDING + RIGHT_PADDING)+"");
+        
         //rectHeght = (int) (rectWidth * 54 / 85.6);//643
         rectHeght = rectWidth;
         Log.i("边长预设", rectWidth+"");
         // 相对于此view
-        rectTop = (viewHeight - rectHeght) / 2;
+        rectTop = (viewHeight - rectHeght) / 2;//界面的高 減去 定好的邊長高 
         rectBottom = rectTop + rectHeght;
         
         rectLeft = (viewWidth - rectWidth) / 2;
         rectRight = rectLeft + rectWidth;
 
+        
+        
+        //-rectWidth 定好的正方行邊長
+       /*
+        float ag = (float) viewHeight/2;//中心点的y坐標
+        float ah = (float) ag - (rectHeght/2);//方行頂部y坐標  --> 中心點向上移動正方行的 邊長/2
+        Log.i("頂部y坐標", ah+"");
+        float bg = (float) ag + (rectHeght/2);//方行底部y座標 中心點往下移正方行的 邊長/2
+        Log.i("底部y座標", bg+"");
+        
+        float oa = (float) viewWidth/2;//中心点的x坐標
+        float ow = (float) oa - (rectWidth/2);//方行頂部x坐標  --> 中心點向左移動正方行的 邊長/2
+        Log.i("頂部x坐標", ow+"");
+        float og = (float) ow + (rectWidth/2);//方行底部x座標 --> 中心點向右移動正方行的 邊長/2
+        Log.i("底部x座標", og+"");
+        
+        //--寬高比值
+        Log.i("肏", rectHeght+"/"+viewHeight);
+        Log.i("肏", rectWidth+"/"+viewWidth);
+        Highratio = (float) rectHeght / viewHeight;
+        Widthratio = (float) rectWidth/viewWidth;
+        Log.i("高比值", Highratio+"");
+        Log.i("寬比值", Widthratio+"");
+        */
+        fuckSide = rectHeght;//-實際截圖邊長
+        
         density = context.getResources().getDisplayMetrics().density;//将像素转换成dp
         
-        
-    
         lineLen = panelWidth / 8;
 
         linePaint = new Paint();
@@ -206,4 +242,24 @@ public class CameraTopRectView2 extends View {
         return viewHeight;
     }
 
+	public float getHighratio() {
+		return Highratio;
+	}
+
+
+	public float getWidthratio() {
+		return Widthratio;
+	}
+
+	public int getFuckSide() {
+		return fuckSide;
+	}
+
+
+    
+    
+    
+    
+    
+    
 }
